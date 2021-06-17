@@ -206,8 +206,97 @@ function sparqlToDataTable2(sparql, element, filename, options={}) {
     });
 };
 
+function sparqlToDataTableLimits(sparql, element, filename, options={}) {
+    // Options: linkPrefixes={}, paging=true
+    var linkPrefixes = (typeof options.linkPrefixes === 'undefined') ? {} : options.linkPrefixes;
+    var linkSuffixes = (typeof options.linkSuffixes === 'undefined') ? {} : options.linkSuffixes;
+    var paging = (typeof options.paging === 'undefined') ? true : options.paging;
+    var sDom = (typeof options.sDom === 'undefined') ? 'lfrtip' : options.sDom;
+    var url = "https://query.wikidata.org/sparql?query=" + 
+        encodeURIComponent(sparql.replace(/\{w\}/, "0")) + '&format=json';
 
+    var table = null;
+    
+    $.getJSON(url, function(response) {
+        var simpleData = sparqlDataToSimpleData(response);
+        
+        convertedData = convertDataTableData(simpleData.data, simpleData.columns, linkPrefixes=linkPrefixes, linkSuffixes=linkSuffixes);
+        columns = [];
+        for ( let i = 0 ; i < convertedData.columns.length ; i++ ) {
+            var column = {
+                data: convertedData.columns[i],
+                title: capitalizeFirstLetter(convertedData.columns[i]).replace(/_/g, "&nbsp;"),
+                defaultContent: "",
+            }
+            columns.push(column)
+        }
 
+        console.log(convertedData.data);
+	
+        table = $(element).DataTable({ 
+            data: convertedData.data,
+            columns: columns,
+            lengthMenu: [[10, 25, 100, -1], [10, 25, 100, "All"]],
+            ordering: true,
+            order: [], 
+            paging: paging,
+            sDom: sDom,
+        });
+	
+        $(element).append(
+            '<caption><span style="float:left; font-size:smaller;"><a href="https://query.wikidata.org/#' + 
+                encodeURIComponent(sparql) +    
+                '">Wikidata Query Service</a></span>' +
+                '<span style="float:right; font-size:smaller;"><a href="https://github.com/fnielsen/scholia/blob/master/scholia/app/templates/' +
+                filename + '">' +
+                filename.replace("_", ": ") +
+                '</a></span></caption>'
+        );
+
+        let options = {
+            linkPrefixes: linkPrefixes,
+            linkSuffixes: linkSuffixes
+        }
+
+        sequenceQueriesWithOffset(sparql, 1000, table, options);
+        
+    });
+}
+
+function sequenceQueriesWithOffset(sparql, offset, table, options) {
+    let i = offset;
+    queryWithOffset(sparql, offset, table, options).then(function(data) {
+        console.log(data);
+        if(data.length > 0) {
+            i += 1000;
+            console.log(i);
+            sequenceQueriesWithOffset(sparql, i, table, options);
+        }
+    }).catch(e => {
+        console.log(e);
+        sequenceQueriesWithOffset(sparql, i, table, options);
+    });;
+}
+
+async function queryWithOffset(sparql, offset, table, options) {
+    console.log(offset);
+    url = "https://query.wikidata.org/sparql?query=" + 
+        encodeURIComponent(sparql.replace(/\{w\}/, offset.toString())) + '&format=json';
+
+    console.log(url)
+
+    let result = await $.getJSON(url, function(response) {
+        var simpleData = sparqlDataToSimpleData(response);
+        
+        convertedData = convertDataTableData(simpleData.data, simpleData.columns, 
+            linkPrefixes=options.linkPrefixes, linkSuffixes=options.linkSuffixes);
+        console.log(convertedData.data);
+        table.rows.add(convertedData.data).order([ 0, 'desc' ]).draw();
+        return convertedData.data.length
+    });
+    console.log(result)
+    return result.results.bindings;
+}
 
 function sparqlToIframe(sparql, element, filename) {
     url = "https://query.wikidata.org/embed.html#" + encodeURIComponent(sparql);

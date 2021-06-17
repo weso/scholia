@@ -9,6 +9,15 @@ sparqlToDataTable2(`# tool: scholia
 options={{ options | tojson }});
 {%- endmacro %}
 
+{% macro sparql_to_table_limits(panel, options={}) -%}
+// {{ panel }} table
+sparqlToDataTableLimits(`# tool: scholia
+{% include aspect + '_' + panel + '.sparql' %}
+`,
+"#{{ panel }}-table", "{{ aspect }}_{{ panel }}.sparql",
+options={{ options | tojson }});
+{%- endmacro %}
+
 {% macro sparql_to_iframe(panel) -%}
 // {{ panel }} iframe
 sparqlToIframe(`# tool: scholia
