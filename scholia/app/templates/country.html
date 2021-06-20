@@ -5,7 +5,7 @@
 
 {% block in_ready %}
 
-{{ sparql_to_table('organizations') }}
+{{ sparql_to_table_limits('organizations') }}
 {{ sparql_to_table_limits('authors') }}
 
 {{ sparql_to_iframe('locations-as-topics') }}
