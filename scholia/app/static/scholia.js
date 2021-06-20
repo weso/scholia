@@ -215,14 +215,18 @@ function sparqlToDataTableLimits(sparql, element, filename, options={}) {
     var url = "https://query.wikidata.org/sparql?query=" + 
         encodeURIComponent(sparql.replace(/\{w\}/, "0")) + '&format=json';
 
+    var extractedData = [];
+
     var table = null;
     
     $.getJSON(url, function(response) {
         var simpleData = sparqlDataToSimpleData(response);
         
         convertedData = convertDataTableData(simpleData.data, simpleData.columns, linkPrefixes=linkPrefixes, linkSuffixes=linkSuffixes);
+        
         columns = [];
         for ( let i = 0 ; i < convertedData.columns.length ; i++ ) {
+            if(convertedData.columns[i] === "hiddenId") continue;
             var column = {
                 data: convertedData.columns[i],
                 title: capitalizeFirstLetter(convertedData.columns[i]).replace(/_/g, "&nbsp;"),
@@ -231,7 +235,9 @@ function sparqlToDataTableLimits(sparql, element, filename, options={}) {
             columns.push(column)
         }
 
-        console.log(convertedData.data);
+        convertedData.data.forEach(function(row) {
+            extractedData.push(row.hiddenId)
+        } );
 	
         table = $(element).DataTable({ 
             data: convertedData.data,
@@ -258,43 +264,44 @@ function sparqlToDataTableLimits(sparql, element, filename, options={}) {
             linkSuffixes: linkSuffixes
         }
 
-        sequenceQueriesWithOffset(sparql, 1000, table, options);
+        sequenceQueriesWithOffset(sparql, 1000, table, extractedData, options);
         
     });
 }
 
-function sequenceQueriesWithOffset(sparql, offset, table, options) {
+function sequenceQueriesWithOffset(sparql, offset, table, extractedData, options) {
     let i = offset;
-    queryWithOffset(sparql, offset, table, options).then(function(data) {
-        console.log(data);
+    queryWithOffset(sparql, offset, table, extractedData, options).then(function(data) {
         if(data.length > 0) {
             i += 1000;
-            console.log(i);
-            sequenceQueriesWithOffset(sparql, i, table, options);
+            sequenceQueriesWithOffset(sparql, i, table, extractedData, options);
         }
     }).catch(e => {
         console.log(e);
-        sequenceQueriesWithOffset(sparql, i, table, options);
+        sequenceQueriesWithOffset(sparql, i, table, extractedData, options);
     });;
 }
 
-async function queryWithOffset(sparql, offset, table, options) {
-    console.log(offset);
+async function queryWithOffset(sparql, offset, table, extractedData, options) {
     url = "https://query.wikidata.org/sparql?query=" + 
         encodeURIComponent(sparql.replace(/\{w\}/, offset.toString())) + '&format=json';
 
-    console.log(url)
-
     let result = await $.getJSON(url, function(response) {
+        var dataToAdd = [];
         var simpleData = sparqlDataToSimpleData(response);
         
         convertedData = convertDataTableData(simpleData.data, simpleData.columns, 
             linkPrefixes=options.linkPrefixes, linkSuffixes=options.linkSuffixes);
-        console.log(convertedData.data);
-        table.rows.add(convertedData.data).order([ 0, 'desc' ]).draw();
-        return convertedData.data.length
+
+        convertedData.data.forEach(function(row) {
+            if(!extractedData.includes(row.hiddenId)) {
+                extractedData.push(row.hiddenId);
+                dataToAdd.push(row);             
+            }
+        });
+        table.rows.add(dataToAdd).order([ 0, 'desc' ]).draw();
+        return dataToAdd.length
     });
-    console.log(result)
     return result.results.bindings;
 }
 

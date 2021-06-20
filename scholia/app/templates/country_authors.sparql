@@ -1,6 +1,6 @@
 SELECT
   ?number_of_citing_works
-  ?author ?authorLabel
+  ?author ?authorLabel (?author as ?hiddenId)
   ?organization ?organizationLabel
   ?example_work ?example_workLabel
 WITH {
