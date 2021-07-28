@@ -170,7 +170,19 @@ function sparqlToDataTable2(sparql, element, filename, options={}) {
     var url = "https://query.wikidata.org/sparql?query=" + 
         encodeURIComponent(sparql) + '&format=json';
     
+    console.log(options)
+    console.log(options.cached)
+    if(options.cached){
+        console.log('entra')
+        url="https://93.156.67.224:3000/scholia/country_authors/"+options.wikidataId
+    }
+
     $.getJSON(url, function(response) {
+
+        if(options.cached){
+            console.log('entra')
+            response = response.data
+        }
         var simpleData = sparqlDataToSimpleData(response);
         
         convertedData = convertDataTableData(simpleData.data, simpleData.columns, linkPrefixes=linkPrefixes, linkSuffixes=linkSuffixes);
