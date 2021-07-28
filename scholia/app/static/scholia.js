@@ -174,7 +174,7 @@ function sparqlToDataTable2(sparql, element, filename, options={}) {
     console.log(options.cached)
     if(options.cached){
         console.log('entra')
-        url="https://93.156.67.224:3000/scholia/country_authors/"+options.wikidataId
+        url="https://localhost:3000/scholia/country_authors/"+options.wikidataId
     }
 
     $.getJSON(url, function(response) {
