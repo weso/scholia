@@ -108,16 +108,21 @@ function sparqlDataToSimpleData(response) {
     // Convert long JSON data from from SPARQL endpoint to short form
     let data = response.results.bindings;
     let columns = response.head.vars
+    if(columns[3]=='hiddenId'){
+	columns.splice(3,1);
+    }
     var convertedData = [];
     for (var i = 0 ; i < data.length ; i++) {
 	var convertedRow = {};
 	for (var key in data[i]) {
-	    convertedRow[key] = data[i][key]['value'];
+	    if(key!='hiddenId'){
+	    	convertedRow[key] = data[i][key]['value'];
+	    }
 	}
 	convertedData.push(convertedRow);
     }
     return {data: convertedData, columns: columns};
-}
+}	
 
 
 function sparqlToDataTable2(sparql, element, options={}) {
@@ -193,6 +198,7 @@ function fillTableFromResponse(response,sparql,element, filename,options){
     var simpleData = sparqlDataToSimpleData(response);
         
     convertedData = convertDataTableData(simpleData.data, simpleData.columns, linkPrefixes=linkPrefixes, linkSuffixes=linkSuffixes);
+    console.log(convertedData)    
     columns = [];
     for ( i = 0 ; i < convertedData.columns.length ; i++ ) {
         var column = {
