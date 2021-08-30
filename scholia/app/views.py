@@ -4,6 +4,7 @@ import re
 
 from flask import (Blueprint, current_app, redirect, render_template, request,
                    Response, url_for)
+from jinja2 import TemplateNotFound
 from werkzeug.routing import BaseConverter
 
 from ..api import entity_to_name, entity_to_smiles, search, wb_get_entities
@@ -71,6 +72,12 @@ P_PATTERN = re.compile(r'P[1-9]\d*')
 
 # Wikidata item identifiers matcher
 qs_pattern = r'<regex(r"Q[1-9]\d*(?:[^0-9]+Q[1-9]\d*)*"):qs>'
+
+# https://www.crossref.org/blog/dois-and-matching-regular-expressions/
+DOI_PATTERN = re.compile(r'10\.\d{4,9}/[-._;()/:A-Z0-9]+', re.IGNORECASE)
+
+# pattern for aspects
+ASPECT_PATTERN = '<regex("[a-zA-Z]+"):aspect>'
 
 
 @main.route("/")
@@ -310,44 +317,8 @@ def show_author_rss(q):
     return response
 
 
-@main.route('/author/' + q_pattern + '/missing')
-def show_author_missing(q):
-    """Redirects to the new HTML rendering for missing information.
-
-    Parameters
-    ----------
-    q : str
-        Wikidata item identifier.
-
-    Returns
-    -------
-    html : str
-        Redirected HTML.
-
-    """
-    return redirect(url_for('app.show_author_curation', q=q), code=301)
-
-
-@main.route('/author/' + q_pattern + '/curation')
-def show_author_curation(q):
-    """Return HTML rendering for curation page about specific author.
-
-    Parameters
-    ----------
-    q : str
-        Wikidata item identifier.
-
-    Returns
-    -------
-    html : str
-        Rendered HTML.
-
-    """
-    return render_template('author_curation.html', q=q)
-
-
 @main.route('/author/')
-def show_author_empty():
+def show_author_index():
     """Return author index page.
 
     Returns
@@ -356,7 +327,7 @@ def show_author_empty():
         Rendered index page for author view.
 
     """
-    return render_template('author_empty.html')
+    return render_template('author-index.html')
 
 
 @main.route('/author/random')
@@ -429,42 +400,6 @@ def show_award_empty():
 
     """
     return render_template('award_empty.html')
-
-
-@main.route('/award/' + q_pattern + '/missing')
-def show_award_missing(q):
-    """Redirects to the new HTML rendering for missing information.
-
-    Parameters
-    ----------
-    q : str
-        Wikidata item identifier.
-
-    Returns
-    -------
-    html : str
-        Redirected HTML.
-
-    """
-    return redirect(url_for('app.show_award_curation', q=q), code=301)
-
-
-@main.route('/award/' + q_pattern + '/curation')
-def show_award_curation(q):
-    """Return HTML rendering for curation page about specific award.
-
-    Parameters
-    ----------
-    q : str
-        Wikidata item identifier.
-
-    Returns
-    -------
-    html : str
-        Rendered HTML.
-
-    """
-    return render_template('award_curation.html', q=q)
 
 
 @main.route('/cas/<cas>')
@@ -586,8 +521,39 @@ def show_catalogue_empty():
     return render_template('catalogue_empty.html')
 
 
+@main.route('/dataset/' + q_pattern)
+def show_dataset(q):
+    """Return rendered HTML page for specific dataset.
+
+    Parameters
+    ----------
+    q : str
+        Wikidata item identifier.
+
+    Returns
+    -------
+    html : str
+        Rendered HTML page.
+
+    """
+    return render_template('dataset.html', q=q)
+
+
+@main.route('/dataset/')
+def show_dataset_empty():
+    """Return rendered HTML index page for a dataset.
+
+    Returns
+    -------
+    html : str
+        Rendered HTML index page for a dataset.
+
+    """
+    return render_template('dataset-index.html')
+
+
 @main.route('/clinical-trial/')
-def show_clinical_trial_empty():
+def show_clinical_trial_index():
     """Return clinical trial index page.
 
     Returns
@@ -596,7 +562,7 @@ def show_clinical_trial_empty():
         Rendered index page for clinical trials.
 
     """
-    return render_template('clinical_trial_empty.html')
+    return render_template('clinical-trial-index.html')
 
 
 @main.route('/clinical-trial/' + q_pattern)
@@ -614,7 +580,7 @@ def show_clinical_trial(q):
         Rendered HTML for a specific clinical trial.
 
     """
-    return render_template('clinical_trial.html', q=q)
+    return render_template('clinical-trial.html', q=q)
 
 
 @main.route('/countries/' + qs_pattern)
@@ -1185,42 +1151,6 @@ def show_organization_topic(q1, q2):
     return render_template('organization_topic.html', q1=q1, q2=q2, q=q1)
 
 
-@main.route('/organization/' + q_pattern + '/missing')
-def show_organization_missing(q):
-    """Redirects to the new HTML rendering for missing information.
-
-    Parameters
-    ----------
-    q : str
-        Wikidata item identifier.
-
-    Returns
-    -------
-    html : str
-        Redirected HTML.
-
-    """
-    return redirect(url_for('app.show_organization_curation', q=q), code=301)
-
-
-@main.route('/organization/' + q_pattern + '/curation')
-def show_organization_curation(q):
-    """Return HTML rendering for curation page about an organization.
-
-    Parameters
-    ----------
-    q : str
-        Wikidata item identifier for an organization.
-
-    Returns
-    -------
-    html : str
-        Rendered HTML.
-
-    """
-    return render_template('organization_curation.html', q=q)
-
-
 @main.route('/organizations/' + qs_pattern)
 def show_organizations(qs):
     """Return HTML rendering for specific organizations.
@@ -1342,14 +1272,43 @@ def show_search():
     html : str
         Rendered index page for search view.
 
+    Notes
+    -----
+    If a DOI pattern is matched for the search query then the search page is
+    redirected to the DOI redirect page.
+
     """
     query = request.args.get('q', '')
+    page = request.args.get('page', 0)
+
+    # Redirect to DOI page if the search query looks like a DOI
+    dois = DOI_PATTERN.findall(query)
+    if len(dois) > 0:
+        doi = dois[0]
+        return redirect(url_for('app.redirect_doi', doi=doi), code=302)
+
+    arxiv = string_to_arxiv(query)
+    if arxiv:
+        qs = arxiv_to_qs(arxiv)
+        if len(qs) > 0:
+            q = qs[0]
+            return redirect(url_for('app.show_work', q=q), code=302)
+        return redirect(url_for('app.show_arxiv_to_quickstatements',
+                                arxiv=arxiv), code=302)
+
+    search_results = []
+    next_page = -1
+    prev_page = -1
+
     if query:
-        search_results = search(query)
-    else:
-        search_results = []
-    return render_template('search.html',
-                           query=query, search_results=search_results)
+        data = search(query, page)
+        search_results = data["results"]
+        next_page = data.get("next_page", -1)
+        prev_page = data.get("prev_page", -1)
+
+    return render_template(
+        'search.html', query=query, search_results=search_results,
+        next_page=next_page, prev_page=prev_page)
 
 
 @main.route('/gene/' + q_pattern)
@@ -1587,42 +1546,6 @@ def show_topics(qs):
         return render_template('topics.html', qs=qs)
 
 
-@main.route('/topic/' + q_pattern + '/missing')
-def show_topic_missing(q):
-    """Redirects to the new HTML rendering for missing information.
-
-    Parameters
-    ----------
-    q : str
-        Wikidata item identifier.
-
-    Returns
-    -------
-    html : str
-        Redirected HTML.
-
-    """
-    return redirect(url_for('app.show_topic_curation', q=q), code=301)
-
-
-@main.route('/topic/' + q_pattern + '/curation')
-def show_topic_curation(q):
-    """Return rendered HTML for curation page for topic.
-
-    Parameters
-    ----------
-    q : str
-        Wikidata item identifiers.
-
-    Returns
-    -------
-    html : str
-        Rendered HTML index page for topic.
-
-    """
-    return render_template('topic_curation.html', q=q)
-
-
 @main.route('/chemical/' + q_pattern)
 def show_chemical(q):
     """Return html render page for specific chemical.
@@ -1661,18 +1584,6 @@ def show_chemical_index():
 
 
 @main.route('/chemical/missing')
-def show_chemical_missing(q):
-    """Redirects to the new HTML rendering for missing information.
-
-    Returns
-    -------
-    html : str
-        Redirected HTML.
-
-    """
-    return redirect(url_for('app.show_chemical_index_curation', q=q), code=301)
-
-
 @main.route('/chemical/curation')
 def show_chemical_index_curation():
     """Return rendered HTML index page for curation page for chemicals.
@@ -1782,42 +1693,6 @@ def show_venue(q):
 
     """
     return render_template('venue.html', q=q)
-
-
-@main.route('/venue/' + q_pattern + '/missing')
-def show_venue_missing(q):
-    """Redirects to the new HTML rendering for missing information.
-
-    Parameters
-    ----------
-    q : str
-        Wikidata item identifier.
-
-    Returns
-    -------
-    html : str
-        Redirected HTML.
-
-    """
-    return redirect(url_for('app.show_venue_curation', q=q), code=301)
-
-
-@main.route('/venue/' + q_pattern + '/curation')
-def show_venue_curation(q):
-    """Return HTML rendering for curation page about specific venue.
-
-    Parameters
-    ----------
-    q : str
-        Wikidata item identifier.
-
-    Returns
-    -------
-    html : str
-        Rendered HTML.
-
-    """
-    return render_template('venue_curation.html', q=q)
 
 
 @main.route('/venue/' + q_pattern + '/cito')
@@ -2252,3 +2127,28 @@ def show_about():
 def show_favicon():
     """Detect and redirect for the favicon.ico."""
     return redirect(url_for('static', filename='favicon/favicon.ico'))
+
+
+@main.route('/' + ASPECT_PATTERN + '/' + q_pattern + '/missing')
+@main.route('/' + ASPECT_PATTERN + '/' + q_pattern + '/curation')
+def show_aspect_missing(aspect, q):
+    """Redirects to the new HTML rendering for missing information.
+
+    Parameters
+    ----------
+    aspect: str
+        Aspect variable
+    q : str
+        Wikidata item identifier.
+
+    Returns
+    -------
+    html : str
+        Rendered HTML.
+
+    """
+    try:
+        return render_template('{aspect}_curation.html'.format(aspect=aspect),
+                               q=q)
+    except TemplateNotFound:
+        return render_template("404.html")
