@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+
+{% block scripts %}
+{{super()}}
+<script type="text/javascript" src="{{ url_for('static', filename='js/d3.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/leaflet.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/underscore-min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/wdqs.min.js') }}"></script>
+
+{% endblock %}
+
+{% set aspect = "country" %}
+
+
+{% block in_ready %}
+
+{{ continent_to_table('organizations',options={'wikidataId':q,'section':'organizations'}) }}
+{{ continent_to_table('authors',options={'wikidataId':q,'section':'authors'}) }}
+
+{{ continent_to_iframe(panels=["narrative-locations"],
+options={'wikidataId':q,'section':'locations-as-topics'}) }}
+
+{% endblock %}
+
+
+
+{% block page_content %}
+
+
+<h1 id="h1">Continent</h1>
+
+<div id="intro"></div>
+
+<div id="wembedder"></div>
+
+
+<h2 id="organizations-header">Organizations</h2>
+<div id="organizations-progress" class="action-bar" style="display: block;"><div class="message"><div class="progress"><div class="progress-bar progress-bar-info progress-bar-striped active" role="progressbar" style="width: 100%">Loading...</div></div></div></div>
+<table class="table table-hover" id="organizations-table"></table>
+
+<h2 id="authors-header">Authors</h2>
+<div id="authors-progress" class="action-bar" style="display: block;"><div class="message"><div class="progress"><div class="progress-bar progress-bar-info progress-bar-striped active" role="progressbar" style="width: 100%">Loading...</div></div></div></div>
+
+<style>
+    .progress-bar-info {
+    background-color: #5bc0de;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 80px !important;
+}
+
+.progress {
+    height: 1.8rem;
+}
+.action-bar {
+    height: 20% !important;
+    width: 100%;
+    line-height: 80px !important;
+    font-size: 18px;
+}
+
+.embed-responsive::before{
+    padding-top: 0% !important;
+}
+
+.embed-responsive-16by9::before{
+    padding-top: 0% !important;
+}
+
+div[id^=map]{
+    height: 65vh !important;
+}
+
+</style>
+
+<table class="table table-hover" id="authors-table"></table>
+
+
+<h2 id="narrative-locations-header">Narrative locations</h2>
+Locations used as narrative locations in works.
+<div id="narrative-locations-progress" class="action-bar" style="display: block;"><div class="message"><div class="progress"><div class="progress-bar progress-bar-info progress-bar-striped active" role="progressbar" style="width: 100%">Loading...</div></div></div></div>
+
+<div class="embed-responsive embed-responsive-16by9">
+    <iframe class="embed-responsive-item" id="narrative-locations-iframe"></iframe>
+</div>
+
+
+{% endblock %}

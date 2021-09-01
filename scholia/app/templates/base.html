@@ -18,12 +18,26 @@ sparqlToDataTable(`# tool: scholia
 options={{ options | tojson }});
 {%- endmacro %}
 
+{% macro continent_to_table(panel, options={}) -%}
+// {{ panel }} table
+continentToDataTable(`# tool: scholia
+{% include aspect + '_' + panel + '.sparql' %}
+`,
+"#{{ panel }}-table", "{{ aspect }}_{{ panel }}.sparql",
+options={{ options | tojson }});
+{%- endmacro %}
+
 {% macro sparql_to_iframe(panel,options={}) -%}
 // {{ panel }} iframe
 sparqlToIframe(`# tool: scholia
 {% include aspect + '_' + panel + '.sparql' %}`,
 "#{{ panel }}-iframe", "{{ aspect }}_{{ panel }}.sparql",
 options={{ options | tojson }});
+{%- endmacro %}
+
+{% macro continent_to_iframe(panels,options={}) -%}
+// {{ panel }} iframe
+sequentialCTIF(panels={{panels | tojson}}, options={{ options | tojson }});
 {%- endmacro %}
 
 {% macro sparql_to_matrix(panel) -%}
@@ -655,6 +669,7 @@ sparqlToShortInchiKey(`# tool: scholia
 		<ul class="dropdown-menu">
 		    <li role="presentation"><a href="{{ url_for('app.show_location_empty') }}">Location</a></li>
 		    <li role="presentation"><a href="{{ url_for('app.show_country_empty') }}">Country</a></li>
+			<li role="presentation"><a href="{{ url_for('app.show_continent_empty') }}">Continent</a></li>
 		</ul>
 	    </div>
 	</li>

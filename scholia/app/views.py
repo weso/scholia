@@ -632,6 +632,35 @@ def show_country(q):
     """
     return render_template('country.html', q=q)
 
+@main.route('/continent/')
+def show_continent_empty():
+    """Return continent index page.
+
+    Returns
+    -------
+    html : str
+        Rendered index page for continent view.
+
+    """
+    return render_template('continent_empty.html')
+
+@main.route('/continent/' + q_pattern)
+def show_continent(q):
+    """Return HTML rendering for specific country.
+
+    Parameters
+    ----------
+    q : str
+        Wikidata item identifier.
+
+    Returns
+    -------
+    html : str
+        Rendered HTML for a specific country.
+
+    """
+    return render_template('continent.html', q=q)
+
 
 @main.route('/country/' + q1_pattern + '/topic/' + q2_pattern)
 def show_country_topic(q1, q2):
