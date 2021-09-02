@@ -167,22 +167,21 @@ function sparqlToDataTable2(sparql, element, options={}) {
 
 
 function sparqlToDataTable(sparql,element, filename, options={}) {
-   
-
-    var url = "https://query.wikidata.org/sparql?query=" + 
-        encodeURIComponent(sparql) + '&format=json';
-
+  
     console.log(options.section)
-    url="http://156.35.94.157:3000/scholia/country_"+options.section+"/"+options.wikidataId
-    $.getJSON(url, function(response) {
+	var wikidataUrl = "https://query.wikidata.org/sparql?query=" + encodeURIComponent(sparql) + '&format=json';
+    var cacheUrl="http://156.35.94.157:3000/scholia/country_"+options.section+"/"+options.wikidataId
+	
+    $.getJSON(cacheUrl, function(response) {
+		console.log(response)
         fillTableFromResponse(response.data,sparql,element,filename,options);
-    });
+    }).fail(function() {
+		console.log( "non cached element" );  
+		$.getJSON(wikidataUrl, function(response) {
+			fillTableFromResponse(response,sparql,element,filename,options);
+		})
+	});
     return;
-
-    /*
-    $.getJSON(url, function(response) {
-        fillTableFromResponse(response,sparql,element,filename,options);
-    });*/
 };
 
 
@@ -229,23 +228,47 @@ function fillTableFromResponse(response,sparql,element, filename,options){
             '</a></span></caption>'
     );
 
-    $('#'+options.section+'-progress').css('display','none');
+    disposeLoadingAnimation(options);
     return table
 }
 
 
+
 function sparqlToIframe(sparql, element, filename,options) {
-    var result = new wikibase.queryService.ui.resultBrowser.CoordinateResultBrowser();
-    url="http://156.35.94.157:3000/scholia/country_"+options.section+"/"+options.wikidataId
-    $.getJSON(url, function(response) {
-          result.setResult(response.data)
-          url = "https://query.wikidata.org/embed.html#" + encodeURIComponent(sparql);
-          $(element).attr('src', url);
-          $('#'+options.section+'-header').next().empty();
-          result.draw($('#'+options.section+'-header').next());
-	  document.getElementById('map').id = 'map-'+options.section;
+    var result = new wikibase.queryService.ui.resultBrowser.CoordinateResultBrowser();	
+    var cacheUrl="http://156.35.94.157:3000/scholia/country_"+options.section+"/"+options.wikidataId;
+    $.getJSON(cacheUrl, function(response) {
+		console.log(response.data.length);
+		if(response?.data?.length <=0){
+			console.log("non cached element");
+			sparqlToIframeWikidata(sparql, element, filename,options);
+			return;
+		}
+		result.setResult(response.data)
+		cacheUrl = "https://query.wikidata.org/embed.html#" + encodeURIComponent(sparql);
+		$(element).attr('src', cacheUrl);
+		$('#'+options.section+'-header').next().empty();
+		result.draw($('#'+options.section+'-header').next());
+		document.getElementById('map').id = 'map-'+options.section;
+   }).fail(function() {
+		sparqlToIframeWikidata(sparql, element, filename,options);
    });
 };
+
+function sparqlToIframeWikidata(sparql, element, filename,options){
+	var wikidataUrl = "https://query.wikidata.org/embed.html#" + encodeURIComponent(sparql);
+	$(element).attr('src', wikidataUrl);
+		$(element).parent().after(
+			'<span style="float:right; font-size:smaller"><a href="https://github.com/fnielsen/scholia/blob/master/scholia/app/templates/' + filename + '">' +
+				filename.replace("_", ": ") +
+				'</a></span>');
+	disposeLoadingAnimation(options);
+}
+
+
+function disposeLoadingAnimation(options){
+	$('#'+options.section+'-progress').css('display','none');
+}
 
 //CONTINENT TEST
 

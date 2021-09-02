@@ -94,6 +94,12 @@ sparqlToShortInchiKey(`# tool: scholia
 {% block scripts %}
 {{super()}}
 
+<script type="text/javascript" src="{{ url_for('static', filename='js/d3.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/leaflet.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/underscore-min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/wdqs.min.js') }}"></script>
+
+
 <script type="text/javascript" src="{{ url_for('static', filename='d3.v5.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='d3-scale-chromatic.v1.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='jquery.dataTables.min.js') }}"></script>
