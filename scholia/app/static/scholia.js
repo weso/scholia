@@ -256,26 +256,34 @@ async function continentToDataTable(sparql, element, filename, options = {}) {
 
     console.log(options.section)
     let countries = getCountriesByContinent(options.wikidataId);
+    
     url = "http://156.35.94.157:3000/scholia/country_" + options.section + "/" + countries[0]
     let table;
 
-    await $.getJSON(url, function(response) {
-        table = fillTableFromResponse(response.data, sparql, element, filename, options);
-    });
+    if(countries.length === 0) {
+	$(element).text("No data available");
+	$('#'+options.section+'-progress').css('display','none');
+    }
+    else {
 
-    for (let c = 1; c < countries.length; c++) {
-        url = "http://156.35.94.157:3000/scholia/country_" + options.section + "/" + countries[c]
-        $.getJSON(url, function(response) {
-            var simpleData = sparqlDataToSimpleData(response.data);
+    	await $.getJSON(url, function(response) {
+        	table = fillTableFromResponse(response.data, sparql, element, filename, options);
+    	});
+
+    	for (let c = 1; c < countries.length; c++) {
+        	url = "http://156.35.94.157:3000/scholia/country_" + options.section + "/" + countries[c]
+        	$.getJSON(url, function(response) {
+            	var simpleData = sparqlDataToSimpleData(response.data);
         
-            convertedData = convertDataTableData(simpleData.data, simpleData.columns, 
-                linkPrefixes=options.linkPrefixes, linkSuffixes=options.linkSuffixes);
+            	convertedData = convertDataTableData(simpleData.data, simpleData.columns, 
+                	linkPrefixes=options.linkPrefixes, linkSuffixes=options.linkSuffixes);
 
-            table.rows.add(convertedData.data).order([0, 'desc']).draw();
+            	table.rows.add(convertedData.data).order([0, 'desc']).draw();
 
-            simpleData = null;
-            convertedData = null;
+            	simpleData = null;
+            	convertedData = null;
         });
+    	}
     }
 
     return;
@@ -295,31 +303,38 @@ async function continentToIframe(sparql, element, filename,options) {
     var result = new wikibase.queryService.ui.resultBrowser.CoordinateResultBrowser();
     let countries = getCountriesByContinent(options.wikidataId);
     let cachedData;
-    url = "http://156.35.94.157:3000/scholia/country_" + options.section + "/" + countries[0]    
-    await $.getJSON(url, function(response) {
-        cachedData = response.data;
-    });
+    url = "http://156.35.94.157:3000/scholia/country_" + options.section + "/" + countries[0]  
 
-    for (let c = 1; c < countries.length; c++) {
-        url = "http://156.35.94.157:3000/scholia/country_" + options.section + "/" + countries[c]
-        await $.getJSON(url, function(response) {
-            console.log(countries[c])
-            for(r in response.data.results.bindings) {
-                cachedData.results.bindings.push(response.data.results.bindings[r])
-            }
-            console.log(cachedData.results.bindings.length)
-            result.setResult(cachedData)
-            url = "https://query.wikidata.org/embed.html#" + encodeURIComponent(sparql);
-            $(element).attr('src', url);
-            console.log(options)
-            $('#'+options.section+'-header').next().empty();
-            result.draw($('#'+options.section+'-header').next());
-            document.getElementById('map').id = 'map-'+options.section;
-        });
+    if(countries.length === 0) {
+	$("#" + element.replace("iframe", "warn")).text("No data available");
+	$('#'+options.section+'-progress').css('display','none');
+    }  
+    else {
+    	await $.getJSON(url, function(response) {
+        cachedData = response.data;
+    	});
+
+    	for (let c = 1; c < countries.length; c++) {
+        	url = "http://156.35.94.157:3000/scholia/country_" + options.section + "/" + countries[c]
+        	await $.getJSON(url, function(response) {
+            	console.log(countries[c])
+            	for(r in response.data.results.bindings) {
+                	cachedData.results.bindings.push(response.data.results.bindings[r])
+            	}
+            	console.log(cachedData.results.bindings.length)
+            	result.setResult(cachedData)
+            	url = "https://query.wikidata.org/embed.html#" + encodeURIComponent(sparql);
+            	$(element).attr('src', url);
+            	console.log(options)
+            	$('#'+options.section+'-header').next().empty();
+       	    	result.draw($('#'+options.section+'-header').next());
+      	    	document.getElementById('map').id = 'map-'+options.section;
+    	    });
+    	}
+    	cachedData = null;
+    	result.setResult(null);
+    	result = null;
     }
-    cachedData = null;
-    result.setResult(null);
-    result = null;
 };
 
 function getCountriesByContinent(con) {
