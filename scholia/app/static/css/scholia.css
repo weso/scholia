@@ -107,3 +107,32 @@ h3 {
     margin: 1rem;
 
 }
+
+.progress-bar-info {
+    background-color: #5bc0de;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 80px !important;
+}
+
+.progress {
+    height: 1.8rem;
+}
+.action-bar {
+    height: 20% !important;
+    width: 100%;
+    line-height: 80px !important;
+    font-size: 18px;
+}
+
+.embed-responsive::before{
+    padding-top: 0% !important;
+}
+
+.embed-responsive-16by9::before{
+    padding-top: 0% !important;
+}
+
+div[id^=map]{
+    height: 65vh !important;
+}
